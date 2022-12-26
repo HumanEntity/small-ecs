@@ -1,7 +1,7 @@
 use super::Component;
 
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Entity{
     components: Vec<Box<dyn Component>>,
     childs: Vec<Entity>,
@@ -37,5 +37,12 @@ impl Entity{
     pub fn remove_child(&mut self, indx: usize) -> Entity{
         self.childs.remove(indx)
     }
-        
+    pub fn update(&mut self) {
+        for child in &mut self.childs {
+            child.update();
+        }
+        for component in &mut self.components{
+            component.update();
+        }
+    }
 }

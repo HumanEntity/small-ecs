@@ -1,24 +1,27 @@
 use super::Component;
 
-
+/**Entity struct implementation*/
 #[derive(Debug, Default)]
 pub struct Entity{
     components: Vec<Box<dyn Component>>,
-    childs: Vec<Entity>,
+    children: Vec<Entity>,
 }
 impl Entity{
+    /**Constructor*/
     pub fn new() -> Self{
         Self{
             components: Vec::new(),
-            childs: Vec::new(),
+            children: Vec::new(),
         }
     }
     
+    /**Adding component*/
     pub fn add_component<T>(&mut self, component: T )
     where T: Component + 'static{
         self.components.push(Box::new(component));
     }
 
+    /**Removing component*/
     pub fn remove_component<T>(&mut self, component: T) -> Result<Box<dyn Component>, &str>
     where T: Component {
         let t = component.type_str();
@@ -30,19 +33,34 @@ impl Entity{
         Err("Cannot remove component of this type")
     }
 
-    pub fn add_child(&mut self, child: Entity) {
-        self.childs.push(child);
+    /**Adding children*/
+    pub fn add_child(&mut self, child: Entity) -> usize{
+        self.children.push(child);
+        self.children.len() - 1
+    }
+    
+    /**Removing children*/
+    pub fn remove_child(&mut self, indx: usize) -> Entity{
+        self.children.remove(indx)
     }
 
-    pub fn remove_child(&mut self, indx: usize) -> Entity{
-        self.childs.remove(indx)
-    }
+    /**Updating children and components*/
     pub fn update(&mut self) {
-        for child in &mut self.childs {
+        for child in &mut self.children {
             child.update();
         }
         for component in &mut self.components{
             component.update();
+        }
+    }
+
+    /**Setup*/
+    pub fn start(&mut self) {
+        for child in &mut self.children {
+            child.start();
+        }
+        for component in &mut self.components{
+            component.start();
         }
     }
 }

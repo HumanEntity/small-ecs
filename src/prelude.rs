@@ -12,3 +12,5 @@ pub trait TypeStr{
         core::any::type_name::<Self>()
     }
 }
+
+impl<T> TypeStr for T{}

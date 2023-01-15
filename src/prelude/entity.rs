@@ -1,4 +1,4 @@
-use super::Component;
+use super::{Component, Containable};
 
 /**Entity struct implementation*/
 #[derive(Debug, Default)]
@@ -43,9 +43,10 @@ impl Entity{
     pub fn remove_child(&mut self, indx: usize) -> Entity{
         self.children.remove(indx)
     }
-
+}
+impl Containable for Entity {
     /**Updating children and components*/
-    pub fn update(&mut self) {
+    fn update(&mut self) {
         for child in &mut self.children {
             child.update();
         }
@@ -55,7 +56,7 @@ impl Entity{
     }
 
     /**Setup*/
-    pub fn start(&mut self) {
+    fn start(&mut self) {
         for child in &mut self.children {
             child.start();
         }

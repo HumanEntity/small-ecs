@@ -20,6 +20,14 @@ strip = true
 lto = true
 codegen-units = 1
 
+[profile.bench]
+opt-level = 3
+overflow-checks = false
+debug = false
+strip = true
+lto = true
+codegen-units = 1
+
 [dependencies]
 
 [dev-dependencies]

@@ -7,10 +7,6 @@ license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-static-dispatch = []
-deafault-fatures = []
-
 [lib]
 crate-type = ['dylib', "rlib"]
 
@@ -28,10 +24,8 @@ strip = true
 lto = true
 codegen-units = 1
 
-[dependencies]
-
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.5"
 
 [[bench]]
 name = "hundred_entities"
@@ -40,12 +34,4 @@ harness = false
 [[example]]
 name = "basic"
 path = "examples/basic.rs"
-
-[[example]]
-name = "nested_containers"
-path = "examples/nested_containers.rs"
-
-[[example]]
-name = "children"
-path = "examples/children.rs"
 

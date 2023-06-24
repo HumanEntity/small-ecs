@@ -1,29 +1,17 @@
-use smecs::prelude::*;
+use smecs::prelude::World;
 
-
-
-fn main() {
-    // Container initialization
-    let mut container = Container::new();
-
-    // Entity initialization
-    let mut entity = Entity::new();
-    entity.add_component(HelloWorld);
-
-    // Storing entity in container
-    container.add(entity);
-
-    container.start();
-    container.update();
+#[derive(Debug, Clone)]
+struct Component {
+    x: i32,
 }
 
-#[derive(Debug)]
-pub struct HelloWorld;
-impl Component for HelloWorld{
-    fn start(&mut self) {
-        print!("Hello ");
-    }
-    fn update(&mut self) {
-        println!("World!");
-    }
+/// .
+fn main() {
+    let mut world = World::new();
+    let entity1 = world.new_id();
+    world.write(entity1, Component { x: 0 });
+    let mut component = world.read::<Component>(entity1);
+    component.x = 5;
+    world.write(entity1, component);
+    println!("{:?}", world.read::<Component>(entity1));
 }

@@ -31,6 +31,7 @@ impl BasicStorage {
 
     /// This method writes to the HashMap overriding its value. e. g.
     /// ```rust
+    ///use smecs::BasicStorage;
     /// let mut storage = BasicStorage::new();
     /// storage.write(0, 1);
     /// ```
@@ -41,6 +42,7 @@ impl BasicStorage {
 
     /// This method reads value from HashMap with certain entity id. e. g.
     /// ```rust
+    ///use smecs::BasicStorage;
     ///let mut storage = BasicStorage::new();
     ///storage.read::<i32>(0);
     /// ```
@@ -48,7 +50,7 @@ impl BasicStorage {
     pub fn read<T: 'static + std::clone::Clone>(&self, id: Id) -> Option<T> {
         self.components
             .get(&id)
-            .map(|component| (*component.borrow().downcast_ref::<T>().unwrap()).clone())
+            .map(|component| component.borrow().downcast_ref::<T>().cloned().unwrap())
         // if let Some(component) = self.components.get(&id) {
         //     Some((*component.borrow().downcast_ref::<T>().unwrap()).clone())
         // } else {
@@ -76,6 +78,7 @@ impl World {
 
     /// `new_id` returns a new unique identifier for entity.
     /// ```rust
+    ///use smecs::World;
     ///let mut world = World::new();
     ///world.new_id(); // 0
     /// ```
@@ -87,8 +90,9 @@ impl World {
 
     /// `get_storage` returns a storage for certain component type.
     /// ```rust
+    ///use smecs::World;
     ///let mut world = World::new();
-    ///world.get_storage::<T>(); // Empty BasicStorage
+    ///world.get_storage::<i32>(); // Empty BasicStorage
     /// ```
     /// This return `Rc<RefCell<BasicStorage>>` for operations on that storage.
     pub fn get_storage<T>(&mut self) -> Rc<RefCell<BasicStorage>> {
@@ -98,6 +102,7 @@ impl World {
 
     /// `get_storage_by_name` returns a storage for certain component type using *name* parameter.
     /// ```rust
+    ///use smecs::World;
     ///let mut world = World::new();
     ///world.get_storage_by_name("ComponentType"); // Empty BasicStorage
     /// ```
@@ -111,6 +116,7 @@ impl World {
 
     /// `write` writes value to storage of certain type using entity id.
     /// ```rust
+    /// use smecs::World;
     ///let mut world = World::new();
     ///world.write(0, 5);
     /// ```
@@ -121,37 +127,87 @@ impl World {
 
     /// `read` function reads value from storage of certain type using entity id.
     /// ```rust
+    /// use smecs::World;
     ///let mut world = World::new();
     ///world.write(0, 5);
     ///world.read::<i32>(0); // 5
     /// ```
-    pub fn read<T: Clone + 'static>(&mut self, id: Id) -> T {
+    pub fn read<T: Clone + 'static>(&mut self, id: Id) -> Option<T> {
         let name = std::any::type_name::<T>();
         let storage = self.get_storage_by_name(name);
 
-        let x = storage.borrow().read::<T>(id).unwrap();
+        let x = storage.borrow().read::<T>(id);
         x
     }
 
     /// `each` function iterates over all entities and applies `f` for it.
     /// ```rust
+    ///use smecs::World;
     ///let mut world = World::new();
     ///world.write(0, 5);
     ///world.write(1, 3);
-    ///world.each::<i32>(|world, id, component| println!("{component:?}")) // 5, 3
+    ///world.each::<i32>(|world, id, component| {
+    ///     println!("{component:?}");
+    ///     component
+    ///     }) // 5, 3
     /// ```
-    pub fn each<T: Clone + 'static>(&mut self, f: impl Fn(&mut World, Id, T)) {
+    pub fn each<T: Clone + 'static>(&mut self, mut f: impl FnMut(&mut World, Id, T) -> T) {
         let storage = self.get_storage::<T>();
 
-        for (k, comp) in &storage.borrow().components {
-            let v = (*comp.borrow().downcast_ref::<T>().unwrap()).clone();
-            f(self, k.clone(), v);
+        let keys = storage
+            .borrow()
+            .components
+            .keys()
+            .map(|k| k.clone())
+            .collect::<Vec<_>>();
+        for k in keys {
+            let v = self.read::<T>(k).unwrap();
+            let v = f(self, k, v);
+            self.write(k, v);
         }
+        // keys.iter().for_each(|k| {
+        //     let k = k.clone();
+        //     let v = self.read::<T>(k);
+        //     let v = f(self, k, v);
+        //     self.write(k, v);
+        // });
+        //     let v = (*comp.borrow().downcast_ref::<T>().unwrap()).clone();
+        //     vals.push((k.clone(), f(self, k.clone(), v)));
+        // }
+        // vals.iter().for_each(|x| self.write(x.0, x.1.clone()));
+    }
+}
+
+pub trait System {
+    fn call_system(&self, world: &mut World) -> ();
+}
+
+impl<T: std::clone::Clone + 'static> System for fn(&mut World, Id, T) -> T {
+    fn call_system(&self, world: &mut World) {
+        world.each::<T>(*self);
+    }
+}
+
+// impl<T: std::clone::Clone + 'static> System for dyn FnMut(&mut World, Id, T) -> T {
+//     fn call_system(&self, world: &mut World) {
+//         let f = Box::new(*self);
+//         world.each::<T>();
+//     }
+// }
+
+impl<T> System for T
+where
+    T: Fn(),
+{
+    fn call_system(&self, _world: &mut World) -> () {
+        self()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time;
+
     use super::*;
 
     #[derive(Debug, Clone)]
@@ -180,6 +236,45 @@ mod tests {
         world.each::<Component>(|world, id, component| {
             let v = world.read::<Component2>(id);
             println!("{component:?}\n{v:?}");
+            component
         });
+    }
+    #[test]
+    fn iter_over_components2() {
+        let mut world = World::new();
+        let mut entities = Vec::new();
+        for _ in 0..100 {
+            entities.push(world.new_id());
+            world.write(entities.last().cloned().unwrap(), Component { x: 0 });
+            world.write(entities.last().cloned().unwrap(), Component2 { x: 5.0 });
+        }
+        world.each::<Component>(|world, id1, mut component| {
+            world.each::<Component2>(|_, id2, c| {
+                if id1 == id2 {
+                    component.x += c.x as i32;
+                }
+                c
+            });
+            println!("{component:#?}");
+            component
+        });
+    }
+
+    #[test]
+    fn iter_over_components3() {
+        let mut world = World::new();
+        let mut entities = Vec::new();
+        for _ in 0..100 {
+            entities.push(world.new_id());
+            world.write(entities.last().cloned().unwrap(), Component { x: 0 });
+        }
+
+        let start = time::Instant::now();
+        world.each::<Component>(|w, i, c| {
+            w.each::<Component>(|_, i2, c2| c2);
+            c
+        });
+        let full = start.elapsed().as_secs_f32();
+        println!("{full:?}");
     }
 }

@@ -31,7 +31,7 @@ impl BasicStorage {
 
     /// This method writes to the HashMap overriding its value. e. g.
     /// ```rust
-    ///use smecs::BasicStorage;
+    /// use smecs::BasicStorage;
     /// let mut storage = BasicStorage::new();
     /// storage.write(0, 1);
     /// ```
@@ -42,9 +42,9 @@ impl BasicStorage {
 
     /// This method reads value from HashMap with certain entity id. e. g.
     /// ```rust
-    ///use smecs::BasicStorage;
-    ///let mut storage = BasicStorage::new();
-    ///storage.read::<i32>(0);
+    /// use smecs::BasicStorage;
+    /// let mut storage = BasicStorage::new();
+    /// storage.read::<i32>(0);
     /// ```
     /// This example reads the value from the HashMap with key 0.
     pub fn read<T: 'static + std::clone::Clone>(&self, id: Id) -> Option<T> {
@@ -142,11 +142,11 @@ impl World {
 
     /// `each` function iterates over all entities and applies `f` for it.
     /// ```rust
-    ///use smecs::World;
-    ///let mut world = World::new();
-    ///world.write(0, 5);
-    ///world.write(1, 3);
-    ///world.each::<i32>(|world, id, component| {
+    /// use smecs::World;
+    /// let mut world = World::new();
+    /// world.write(0, 5);
+    /// world.write(1, 3);
+    /// world.each::<i32>(|world, id, component| {
     ///     println!("{component:?}");
     ///     component
     ///     }) // 5, 3
@@ -158,8 +158,10 @@ impl World {
             .borrow()
             .components
             .keys()
-            .map(|k| k.clone())
+            .cloned()
             .collect::<Vec<_>>();
+        // .map(|k| k.clone())
+        // .collect::<Vec<_>>();
         for k in keys {
             let v = self.read::<T>(k).unwrap();
             let v = f(self, k, v);
